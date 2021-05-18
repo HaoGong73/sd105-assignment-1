@@ -1,33 +1,116 @@
 const apiKey = 'y3HnuYNUAqAbaf7rmLl9';
-// https://api.winnipegtransit.com/v3/stops.json/10064?api-key=y3HnuYNUAqAbaf7rmLl9
-// ttps://api.winnipegtransit.com/v3/streets/2715.json?api-key=y3HnuYNUAqAbaf7rmLl9&name=main%20street&type=st&leg=w&usage=long
 
-let streetName = `main street`;
-let array = streetName.split(' ');
-streetName = array.join('%20');
-console.log(streetName);
-const streetURL = `https://api.winnipegtransit.com/v3/streets.json?api-key=${apiKey}&name=${streetName}&usage=long`;
-console.log(streetURL);
-fetch(streetURL)
-.then( (data) => {return data.json()})
-.then((datajson) => console.log(datajson));
-
-// https://api.winnipegtransit.com/v3/stops/10064.json?api-key=y3HnuYNUAqAbaf7rmLl9&street=4499&usage=long
-const streetKey = '4499';
-// const stopURL = `https://api.winnipegtransit.com/v3/stops.json?api-key=y3HnuYNUAqAbaf7rmLl9&street=${streetKey}&usage=long`;
-// https://api.winnipegtransit.com/v3/stops/10064/schedule.json?api-key=y3HnuYNUAqAbaf7rmLl9&max-results-per-route=2
-// https://api.winnipegtransit.com/v3/stops/10185/schedule.json?api-key=y3HnuYNUAqAbaf7rmLl9&max-results-per-route=2
-const stopURL = `https://api.winnipegtransit.com/v3/stops/4499/schedule.json?api-key=y3HnuYNUAqAbaf7rmLl9&usage=long&max-results-per-route=2`;
-console.log(stopURL);
-
-// fetch(streetURL)
-
+const inputForm = document.querySelector('form');
+const streetsList = document.querySelector('.streets');
+const stopsSchedule = document.querySelector('tbody');
+const title = document.querySelector('#street-name');
 
 // 1. street api
 // https://api.winnipegtransit.com/v3/streets.json?api-key=y3HnuYNUAqAbaf7rmLl9&name=main
+const streetsListHTML = (streets) => {
+  streetsList.innerHTML = '';
+  streets.forEach(street => {
+    streetsList.insertAdjacentHTML('beforeend',
+    `<a href="#" data-street-key="${street.key}"
+      >${street.name}</a>`
+    );
+  });
+}
+
+const searchStreets = async (streetName) => {
+  let array = streetName.split(' ');
+  streetName = array.join('%20');
+  let streetURL = `https://api.winnipegtransit.com/v3/streets.json?api-key=${apiKey}&name=${streetName}&usage=long`;
+  const response = await fetch(streetURL);  
+  const data = await response.json();
+
+  console.log(data);
+
+  if (data.status === 404 || data.streets.length === 0) {
+    throw 'Street Not Found';
+  }
+  
+  return data.streets;
+}
 
 // 2. stop api
 // https://api.winnipegtransit.com/v3/stops.json?api-key=y3HnuYNUAqAbaf7rmLl9&street=4499
+const getAllStopKeys = async(streetKey) => {
+  let stopsURL = `https://api.winnipegtransit.com/v3/stops.json?api-key=${apiKey}&street=${streetKey}`;
+  console.log(stopsURL);
+  const response = await fetch(stopsURL);  
+  const data = await response.json();
+
+  console.log(data.stops);
+  
+  return data.stops;
+}
 
 // 3. stop schedule
 // https://api.winnipegtransit.com/v3/stops/61151/schedule.json?api-key=y3HnuYNUAqAbaf7rmLl9
+
+const getStopsSchedule = async (stopsKey) => {
+  let stopsScheduleURL = `https://api.winnipegtransit.com/v3/stops/${stopsKey}/schedule.json?api-key=${apiKey}&max-results-per-route=2`;
+  console.log(stopsScheduleURL);
+
+  const response = await fetch(stopsScheduleURL);  
+  const data = await response.json();
+
+  console.log(data);
+  
+  return data;
+}
+
+const scheduleListHTML = (schedules) => {
+  stopsSchedule.innerHTML = '';
+  
+  schedules.forEach( schedule => {
+
+
+    schedule['stop-schedule']['route-schedules'].forEach((data) => {
+      console.log(data);
+      data['scheduled-stops'].forEach((scheduleStop) => {
+        console.log(schedule['stop-schedule'].stop.name);
+        console.log(schedule['stop-schedule'].stop['cross-street'].name);
+        console.log(schedule['stop-schedule'].stop.direction);
+        console.log(scheduleStop.bus.key);
+
+        let date = new Date(scheduleStop.times.arrival.scheduled);
+
+        stopsSchedule.insertAdjacentHTML('beforeend',
+          `<tr>
+            <td>${schedule['stop-schedule'].stop.name}</td>
+            <td>${schedule['stop-schedule'].stop['cross-street'].name}</td>
+            <td>${schedule['stop-schedule'].stop.direction}</td>
+            <td>${scheduleStop.bus.key}</td>
+            <td>${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}</td>
+          </tr>`
+        );
+      });
+    });
+  });
+}
+
+inputForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  console.log(event.target[0].value);
+  searchStreets(event.target[0].value)
+  .then((date) => {
+    return streetsListHTML(date);
+  })
+  .catch((err) => alert(err));
+  event.target[0].value = '';
+})
+
+streetsList.addEventListener('click', (event) => {
+  console.log(event.target.closest('a').dataset.streetKey);
+  title.innerHTML = `Displaying results for ${event.target.closest('a').innerHTML}`
+  getAllStopKeys(event.target.closest('a').dataset.streetKey)
+  .then((allStops) => {
+    const stopPromises = [];
+    allStops.map((stop) => {
+      stopPromises.push(getStopsSchedule(stop.key));
+    });
+    Promise.all(stopPromises).then(value => scheduleListHTML(value));
+  });
+})
