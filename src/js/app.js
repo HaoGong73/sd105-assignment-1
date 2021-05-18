@@ -101,6 +101,6 @@ streetsList.addEventListener('click', (event) => {
 
     Promise.all(stopPromises)
     .then(value => {return scheduleListHTML(value)})
-    .catch(err => console.log(err));
+    .catch(err => alert("Fetch error! wait a minute!"));
   });
 })
