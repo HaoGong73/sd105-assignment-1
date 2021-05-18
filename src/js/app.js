@@ -39,9 +39,10 @@ const getAllStopKeys = async(streetKey) => {
 const getStopsSchedule = async (stopsKey) => {
   let stopsScheduleURL = `https://api.winnipegtransit.com/v3/stops/${stopsKey}/schedule.json?api-key=${apiKey}&max-results-per-route=2`;
 
-  const response = await fetch(stopsScheduleURL);  
+  const response = await fetch(stopsScheduleURL).catch(error => alert('wait a minute'));  
   const data = await response.json();
 
+  // how can I catch the fetch error?
   return data;
 }
 
