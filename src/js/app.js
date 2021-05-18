@@ -21,8 +21,6 @@ const searchStreets = async (streetName) => {
   const response = await fetch(streetURL);  
   const data = await response.json();
 
-  console.log(data);
-
   if ( data.status === 404 ||data.status === 403|| data.streets.length === 0) {
     throw 'Street Not Found';
   }
@@ -32,25 +30,29 @@ const searchStreets = async (streetName) => {
 
 const getAllStopKeys = async(streetKey) => {
   let stopsURL = `https://api.winnipegtransit.com/v3/stops.json?api-key=${apiKey}&street=${streetKey}`;
-  console.log(stopsURL);
   const response = await fetch(stopsURL);  
   const data = await response.json();
-
-  console.log(data.stops);
   
   return data.stops;
 }
 
 const getStopsSchedule = async (stopsKey) => {
   let stopsScheduleURL = `https://api.winnipegtransit.com/v3/stops/${stopsKey}/schedule.json?api-key=${apiKey}&max-results-per-route=2`;
-  console.log(stopsScheduleURL);
 
   const response = await fetch(stopsScheduleURL);  
   const data = await response.json();
 
-  console.log(data);
-  
   return data;
+}
+
+const timeCovert12h = (dateString) => {
+  let date = new Date(dateString);
+  let hour24 = date.getHours();
+  let hour12 = hour24 % 12 || 12;
+  let minute = date.getMinutes();
+  let ampm = (hour24 < 12 || hour24 === 24) ? "AM" : "PM";
+  
+  return `${hour12}:${minute.toString().padStart(2, '0')} ${ampm}` ;
 }
 
 const scheduleListHTML = (schedules) => {
@@ -59,14 +61,9 @@ const scheduleListHTML = (schedules) => {
   schedules.forEach( schedule => {
 
     schedule['stop-schedule']['route-schedules'].forEach((data) => {
-      console.log(data);
       data['scheduled-stops'].forEach((scheduleStop) => {
-        console.log(schedule['stop-schedule'].stop.name);
-        console.log(schedule['stop-schedule'].stop['cross-street'].name);
-        console.log(schedule['stop-schedule'].stop.direction);
-        console.log(scheduleStop.bus.key);
 
-        let date = new Date(scheduleStop.times.arrival.scheduled);
+        // let date = new Date(scheduleStop.times.arrival.scheduled);
 
         stopsSchedule.insertAdjacentHTML('beforeend',
           `<tr>
@@ -74,7 +71,7 @@ const scheduleListHTML = (schedules) => {
             <td>${schedule['stop-schedule'].stop['cross-street'].name}</td>
             <td>${schedule['stop-schedule'].stop.direction}</td>
             <td>${scheduleStop.bus.key}</td>
-            <td>${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}</td>
+            <td>${timeCovert12h(scheduleStop.times.arrival.scheduled)}</td>
           </tr>`
         );
       });
@@ -84,7 +81,6 @@ const scheduleListHTML = (schedules) => {
 
 inputForm.addEventListener('submit', (event) => {
   event.preventDefault();
-  console.log(event.target[0].value);
   searchStreets(event.target[0].value)
   .then((date) => {
     return streetsListHTML(date);
@@ -94,16 +90,17 @@ inputForm.addEventListener('submit', (event) => {
 })
 
 streetsList.addEventListener('click', (event) => {
-  console.log(event.target.closest('a').dataset.streetKey);
   title.innerHTML = `Displaying results for ${event.target.closest('a').innerHTML}`
   getAllStopKeys(event.target.closest('a').dataset.streetKey)
+  .catch(err => console.log(err))
   .then((allStops) => {
     const stopPromises = [];
     allStops.map((stop) => {
       stopPromises.push(getStopsSchedule(stop.key));
-    })
-    .catch(err => console.log(err));
-    Promise.all(stopPromises).then(value => scheduleListHTML(value))
+    });
+
+    Promise.all(stopPromises)
+    .then(value => {return scheduleListHTML(value)})
     .catch(err => console.log(err));
   });
 })
