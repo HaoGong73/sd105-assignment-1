@@ -38,7 +38,6 @@ const getAllStopKeys = async(streetKey) => {
 
 const getStopsSchedule = async (stopsKey) => {
   let stopsScheduleURL = `https://api.winnipegtransit.com/v3/stops/${stopsKey}/schedule.json?api-key=${apiKey}&max-results-per-route=2`;
-
   const response = await fetch(stopsScheduleURL).catch(err => console.log(err));  
   const data = await response.json();
   
@@ -77,8 +76,8 @@ const scheduleListHTML = (schedules) => {
 inputForm.addEventListener('submit', (event) => {
   event.preventDefault();
   searchStreets(event.target[0].value)
-  .then((date) => {
-    return streetsListHTML(date);
+  .then((data) => {
+    return streetsListHTML(data);
   })
   .catch((err) => alert(err));
   event.target[0].value = '';
