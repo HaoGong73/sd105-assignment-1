@@ -39,10 +39,9 @@ const getAllStopKeys = async(streetKey) => {
 const getStopsSchedule = async (stopsKey) => {
   let stopsScheduleURL = `https://api.winnipegtransit.com/v3/stops/${stopsKey}/schedule.json?api-key=${apiKey}&max-results-per-route=2`;
 
-  const response = await fetch(stopsScheduleURL).catch(error => alert('wait a minute'));  
+  const response = await fetch(stopsScheduleURL).catch(err => console.log(err));  
   const data = await response.json();
-
-  // how can I catch the fetch error?
+  
   return data;
 }
 
@@ -58,14 +57,9 @@ const timeCovert12h = (dateString) => {
 
 const scheduleListHTML = (schedules) => {
   stopsSchedule.innerHTML = '';
-  
   schedules.forEach( schedule => {
-
     schedule['stop-schedule']['route-schedules'].forEach((data) => {
       data['scheduled-stops'].forEach((scheduleStop) => {
-
-        // let date = new Date(scheduleStop.times.arrival.scheduled);
-
         stopsSchedule.insertAdjacentHTML('beforeend',
           `<tr>
             <td>${schedule['stop-schedule'].stop.name}</td>
